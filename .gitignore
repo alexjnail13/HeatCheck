@@ -1,0 +1,18 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# ML model artifacts
+*.pkl
+
+# Node
+node_modules/
+build/
+
+# IDE
+.vscode/
+.idea/

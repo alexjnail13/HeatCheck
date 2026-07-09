@@ -1,0 +1,139 @@
+/* ===== Standings page ===== */
+.standings-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.page-header {
+  margin-bottom: 1.75rem;
+}
+
+.page-header h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  letter-spacing: 0.01em;
+}
+
+.page-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+/* Loading / error mirror the other pages */
+.loading,
+.error {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.error {
+  color: var(--color-accent);
+}
+
+/* ===== Two-conference grid (stacks on mobile) ===== */
+.standings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ===== Conference card ===== */
+.conf-table {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.25rem 1.25rem 0.5rem;
+  overflow: hidden;
+}
+
+.conf-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.9rem;
+}
+
+/* ===== Table ===== */
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.standings-table thead th {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: right;
+  padding: 0 0.6rem 0.7rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.standings-table tbody td {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  text-align: right;
+  padding: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.standings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Seed + team columns are left-aligned; team is the wide one. */
+.col-seed {
+  text-align: center !important;
+  width: 2.5rem;
+  color: var(--color-text-muted);
+}
+
+.col-team {
+  text-align: left !important;
+  font-family: var(--font-body) !important;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.standings-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+/* ===== Playoff tiers ===== */
+/* Playoff seeds (1-6): accent tick on the seed cell. */
+.tier-playoff .col-seed {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* Eliminated seeds (11-15): dimmed. */
+.tier-eliminated td {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+/* Divider lines drawn at the boundaries via adjacent-sibling selectors:
+   solid where the playoff cut is, dashed where the play-in cut is. */
+.tier-playoff + .tier-playin td {
+  border-top: 2px solid var(--color-accent);
+}
+
+.tier-playin + .tier-eliminated td {
+  border-top: 2px dashed var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .standings-table tbody tr:hover td {
+    background: none;
+  }
+}

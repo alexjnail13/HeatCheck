@@ -1,0 +1,112 @@
+/* ===== Home page layout ===== */
+.home {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.home-state {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+/* ===== Sections ===== */
+.game-section {
+  margin-bottom: 2.75rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+}
+
+.section-count {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+/* Accent marker on the Live section header */
+.section-header.live .section-title {
+  color: var(--color-accent);
+}
+
+.section-header.live::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-glow);
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+/* ===== Responsive card grid ===== */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+/* ===== Connection indicator ===== */
+.conn-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.conn-status.online {
+  color: #4ade80;
+}
+
+.conn-status.online .conn-dot {
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+}
+
+.conn-status.offline {
+  color: var(--color-accent);
+}
+
+.conn-status.offline .conn-dot {
+  background: var(--color-accent);
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-header.live::before,
+  .conn-status.offline .conn-dot {
+    animation: none;
+  }
+}
