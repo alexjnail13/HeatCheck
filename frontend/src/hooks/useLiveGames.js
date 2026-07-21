@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 
-const WS_URL = "ws://localhost:8000/api/v1/ws/live";
+// Derive the WebSocket URL from the same base URL the REST client uses, so
+// there's one source of truth. The scheme swap matters: http -> ws locally,
+// https -> wss in production (a page served over https is not allowed to open
+// an insecure ws:// socket — the browser blocks it as mixed content).
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const WS_URL = `${API_BASE.replace(/^http/, "ws")}/ws/live`;
 
 /**
  * Custom hook that connects to the live game WebSocket

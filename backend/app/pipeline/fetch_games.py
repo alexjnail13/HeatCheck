@@ -47,7 +47,15 @@ def fetch_and_store_games(season: str = "2024-25"):
 
         # Insert games into database
         inserted = 0
+        skipped = 0
         for game_data in game_dict.values():
+            # Skip games whose teams we don't track — All-Star (game id "003..."),
+            # exhibition, and international squads aren't in our teams table, so
+            # their ids resolve to None and would violate the NOT NULL FK columns.
+            if game_data.get("home_team_id") is None or game_data.get("away_team_id") is None:
+                skipped += 1
+                continue
+
             existing = db.query(Game).filter(
                 Game.nba_game_id == game_data["nba_game_id"]
             ).first()
@@ -62,7 +70,10 @@ def fetch_and_store_games(season: str = "2024-25"):
                 inserted += 1
 
         db.commit()
-        print(f"Games sync complete. {len(game_dict)} games found, {inserted} new games inserted.")
+        print(
+            f"Games sync complete. {len(game_dict)} games found, "
+            f"{inserted} new games inserted, {skipped} skipped (untracked teams)."
+        )
     finally:
         db.close()
 
