@@ -11,6 +11,7 @@ from typing import List
 
 from google import genai
 from google.genai import types
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.schemas.standings import StandingsRow
@@ -48,17 +49,18 @@ def _format_standings(rows: List[StandingsRow]) -> str:
     return "\n".join(lines)
 
 
-def generate_reply(message: str) -> str:
-    """Fetch live standings, inject them as context, and return Gemini's reply.
+def generate_reply(message: str, db: Session) -> str:
+    """Compute standings, inject them as context, and return Gemini's reply.
 
-    Blocking network calls (nba_api + Gemini) — this is why the route that uses it
-    is a plain `def` (FastAPI runs it in a threadpool so the event loop stays free).
+    The Gemini call blocks — this is why the route that uses it is a plain `def`
+    (FastAPI runs it in a threadpool so the event loop stays free).
     """
-    # Pattern A: pull live data and stuff it into the prompt. If the fetch fails,
-    # fall back to an ungrounded reply rather than erroring the whole chat.
+    # Pattern A: pull data and stuff it into the prompt. Standings now come from
+    # our own database. If it fails, fall back to an ungrounded reply rather than
+    # erroring the whole chat.
     try:
-        standings_text = _format_standings(fetch_standings())
-        context = f"Live NBA standings (current):\n{standings_text}\n"
+        standings_text = _format_standings(fetch_standings(db))
+        context = f"NBA standings (from our database):\n{standings_text}\n"
     except Exception:
         context = ""
 
