@@ -36,14 +36,26 @@ def fetch_and_store_games(season: str = "2024-25"):
             nba_team_id = row["TEAM_ID"]
             db_team_id = team_lookup.get(nba_team_id)
 
-            if "@" in row["MATCHUP"]:
-                # This team is the away team
-                game_dict[game_id]["away_team_id"] = db_team_id
-                game_dict[game_id]["away_team_score"] = row["PTS"]
+            # Determine home/away from the MATCHUP string itself rather than
+            # assuming it's written from THIS row's perspective. Usually the API
+            # flips it per team ("NYK @ ORL" / "ORL vs. NYK"), but for neutral-site
+            # games (NBA Cup in Las Vegas, global games) BOTH rows carry the same
+            # string — which made the old `"@" in MATCHUP` check mark both teams
+            # away, leaving home_team_id unset and silently dropping the game.
+            matchup = row["MATCHUP"]
+            if " @ " in matchup:
+                away_abbr, home_abbr = (s.strip() for s in matchup.split(" @ ", 1))
+            elif " vs. " in matchup:
+                home_abbr, away_abbr = (s.strip() for s in matchup.split(" vs. ", 1))
             else:
-                # This team is the home team
+                continue  # unrecognised format — don't guess
+
+            if row["TEAM_ABBREVIATION"] == home_abbr:
                 game_dict[game_id]["home_team_id"] = db_team_id
                 game_dict[game_id]["home_team_score"] = row["PTS"]
+            else:
+                game_dict[game_id]["away_team_id"] = db_team_id
+                game_dict[game_id]["away_team_score"] = row["PTS"]
 
         # Insert games into database
         inserted = 0
