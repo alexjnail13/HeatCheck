@@ -43,9 +43,16 @@ def fetch_standings(db: Session, season: Optional[str] = None) -> List[Standings
     # team.id -> [wins, losses]
     record: Dict[int, List[int]] = {t.id: [0, 0] for t in teams}
 
+    # Regular season only — standings are a regular-season record, so playoff
+    # (and play-in) results must not be tallied in.
     completed = (
         db.query(Game)
-        .filter(Game.season == season, Game.status == "Final")
+        .filter(
+            Game.season == season,
+            Game.status == "Final",
+            Game.season_type == "Regular Season",
+            Game.nba_game_id.like("002%"),  # 002 = regular season game ids
+        )
         .all()
     )
 
