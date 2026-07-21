@@ -12,25 +12,32 @@ endpoint in production).
 """
 
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database.models import Game, Team
 from app.schemas.standings import StandingsRow
 
 
-def fetch_standings(db: Session, season: str = "2024-25") -> List[StandingsRow]:
+def fetch_standings(db: Session, season: Optional[str] = None) -> List[StandingsRow]:
     """
     Compute conference standings for a season from completed games.
 
     Args:
         db: SQLAlchemy session.
         season: Season string as stored on Game.season (e.g. "2024-25").
+            If None, defaults to the most recent season present in the database,
+            so the endpoint stays correct no matter which season was seeded.
 
     Returns:
         StandingsRow list, ordered by conference then seed (1 = best record).
     """
+    if season is None:
+        # "2025-26" > "2024-25" lexicographically, so max() picks the latest.
+        season = db.query(func.max(Game.season)).scalar()
+
     teams: List[Team] = db.query(Team).all()
 
     # team.id -> [wins, losses]
