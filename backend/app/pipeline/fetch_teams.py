@@ -44,7 +44,7 @@ def fetch_and_store_teams():
 
         for team in nba_teams:
             existing = db.query(Team).filter(
-                Team.nba_api_id == team["id"]
+                Team.nba_team_id == team["id"]
             ).first()
 
             if not existing:
@@ -52,11 +52,13 @@ def fetch_and_store_teams():
                 metadata = TEAM_METADATA.get(abbr, {})
 
                 new_team = Team(
-                    nba_api_id=team["id"],
-                    name=team["nickname"],
+                    nba_team_id=team["id"],
+                    full_name=team["full_name"],
                     city=team["city"],
+                    state=team["state"],
                     abbreviation=abbr,
-                    conference=metadata.get("conference", "Unknown"),
+                    # conference is String(4) — keep the fallback short enough to fit
+                    conference=metadata.get("conference", "N/A"),
                     division=metadata.get("division", "Unknown"),
                 )
                 db.add(new_team)

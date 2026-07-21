@@ -17,7 +17,7 @@ def fetch_and_store_games(season: str = "2024-25"):
 
         # Build a lookup: nba_api team ID -> our database team ID
         teams = db.query(Team).all()
-        team_lookup = {team.nba_api_id: team.id for team in teams}
+        team_lookup = {team.nba_team_id: team.id for team in teams}
 
         # Combine two rows per game into one record
         game_dict = {}

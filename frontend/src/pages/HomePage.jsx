@@ -17,19 +17,16 @@ export default function HomePage() {
   const upcomingCards = upcoming.map(normalizeRestGame);
   const completedCards = completed.map(normalizeRestGame);
 
+  if (loading) return <p className="home-state">Loading games…</p>;
+  if (error) return <p className="home-state">Error trying to load games.</p>;
+
   return (
     <div className="home">
       <div className={`conn-status ${isConnected ? "online" : "offline"}`}>
-        <span className="conn-dot" />
-        {isConnected ? "Live" : "Reconnecting…"}
-      </div>
-
-      {loading && <p className="home-state">Loading games…</p>}
-      {error && <p className="home-state">Error trying to load games.</p>}
-
-      {!loading && !error && (
-        <>
-          {liveCards.length > 0 && (
+  <span className="conn-dot" />
+  {isConnected ? "Live" : "Reconnecting…"}
+</div>
+      {liveCards.length > 0 && (
         <section className="game-section">
           <div className="section-header live">
             <h2 className="section-title">Live</h2>
@@ -69,8 +66,6 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-      )}
-        </>
       )}
     </div>
   );
