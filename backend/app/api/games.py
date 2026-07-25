@@ -4,12 +4,11 @@ from sqlalchemy import or_
 from typing import List, Optional
 from datetime import date
 from app.database.session import get_db
-from app.database.models import Game, Team
+from app.database.models import Game, Team, PlayByPlay
 from app.schemas.game import GameResponse
 from app.schemas.win_probability import WinProbabilityResponse, WinProbabilityPoint
 from app.ml.features import get_team_win_pcts, extract_event_features
 from app.ml.inference import predict_win_probability
-from nba_api.stats.endpoints import playbyplayv3
 
 router = APIRouter()
 
@@ -121,14 +120,16 @@ def get_win_probability(game_id: str, db: Session = Depends(get_db)):
 
     game, home_abbr, away_abbr = result
 
-    # 2. Fetch play-by-play. Blocking nba_api call — fine here because this is a
-    #    plain `def` route, which FastAPI runs in a threadpool (event loop stays free).
-    pbp = playbyplayv3.PlayByPlayV3(
-        game_id=game.nba_game_id,
-        start_period=0,
-        end_period=14,  # covers regulation + overtime
+    # 2. Read play-by-play from OUR database (seeded by pipeline/seed_pbp.py),
+    #    not live from nba_api — stats.nba.com blocks Render's datacenter IP.
+    #    ORDER BY event_num rebuilds the game chronologically (rows have no
+    #    inherent order).
+    events = (
+        db.query(PlayByPlay)
+        .filter(PlayByPlay.game_id == game.id)
+        .order_by(PlayByPlay.event_num)
+        .all()
     )
-    pbp_df = pbp.get_data_frames()[0]
 
     # 3. team_strength_diff — constant for the game, computed once
     win_pcts = get_team_win_pcts(db)
@@ -136,10 +137,17 @@ def get_win_probability(game_id: str, db: Session = Depends(get_db)):
     away_wp = win_pcts.get(game.away_team_id, 0.5)
     strength_diff = home_wp - away_wp
 
-    # 4. Walk each event → predict → build the series
+    # 4. Walk each event → predict → build the series. We rebuild the raw event
+    #    dict and reuse extract_event_features so features are computed by the
+    #    SAME code as training/inference (no train/serve skew).
     points: list[WinProbabilityPoint] = []
-    for _, event in pbp_df.iterrows():
-        feats = extract_event_features(event)
+    for event in events:
+        feats = extract_event_features({
+            "scoreHome": event.score_home,
+            "scoreAway": event.score_away,
+            "period": event.period,
+            "clock": event.clock,
+        })
         if feats is None:
             continue  # skip rows with no score/period — don't fail the request
 

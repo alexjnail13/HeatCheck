@@ -38,3 +38,19 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PlayByPlay(Base):
+    __tablename__ = "play_by_play"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # Which game this event belongs to. Indexed because the win-probability
+    # endpoint always queries "all events for one game".
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False, index=True)
+    # Ordering key from PlayByPlayV3 — lets us ORDER BY to rebuild the game
+    # chronologically (SQL rows have no inherent order).
+    event_num = Column(Integer, nullable=False)
+    period = Column(Integer, nullable=False)
+    clock = Column(String(16), nullable=True)  # ISO clock e.g. "PT04M30.00S"
+    score_home = Column(Integer, nullable=False)
+    score_away = Column(Integer, nullable=False)
