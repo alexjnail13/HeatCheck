@@ -1,0 +1,222 @@
+/* ===== Box score =====
+   Scoped under .boxscore so nothing here leaks into other pages — the same
+   mistake the .page-container rules made earlier. */
+
+.boxscore {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.boxscore-state {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+/* ===== Team tabs ===== */
+.boxscore-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.boxscore-tab {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.boxscore-tab:hover:not(:disabled) {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.boxscore-tab.is-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+.boxscore-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.boxscore-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.tab-abbr {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.tab-score {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* ===== Table =====
+   Horizontal scroll is expected here: 17 stat columns will never fit an 820px
+   column. The player name cell is sticky so you always know whose row you're
+   reading while scrolled right. */
+.boxscore-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.boxscore-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.boxscore-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  padding: 0.7rem 0.55rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.boxscore-table td {
+  color: var(--color-text);
+  text-align: right;
+  padding: 0.6rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.boxscore-table tbody tr:hover td,
+.boxscore-table tbody tr:hover .col-player {
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+}
+
+/* Sticky first column — keeps the name visible while scrolling stats. */
+.col-player {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  text-align: left !important;
+  font-weight: 500;
+  padding-right: 1rem !important;
+  border-right: 1px solid var(--color-border);
+  min-width: 11rem;
+}
+
+thead .col-player {
+  z-index: 2;
+}
+
+.player-name {
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+/* A dot rather than a "STARTER" column — it's one bit of information and
+   doesn't deserve 60px of horizontal space in an already-wide table. */
+.starter-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-left: 0.45rem;
+  vertical-align: middle;
+}
+
+.player-pos {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+}
+
+.stat-emphasis {
+  color: var(--color-text) !important;
+  font-weight: 700;
+}
+
+/* ===== Totals ===== */
+.totals-row .col-player,
+.totals-row td {
+  border-top: 1px solid var(--color-border);
+  border-bottom: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  padding-top: 0.8rem;
+  padding-bottom: 0.9rem;
+}
+
+.totals-row .stat-emphasis {
+  color: var(--color-accent) !important;
+  font-size: 0.85rem;
+}
+
+/* ===== Footnotes ===== */
+.boxscore-dnp,
+.boxscore-team-extras {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  margin: 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.dnp-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 0.6rem;
+  color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
+}
+
+.boxscore-team-extras {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+}
+
+/* ===== Narrow screens ===== */
+@media (max-width: 640px) {
+  .boxscore-table {
+    font-size: 0.72rem;
+  }
+
+  .col-player {
+    min-width: 8.5rem;
+  }
+
+  .boxscore-table thead th,
+  .boxscore-table td {
+    padding: 0.5rem 0.4rem;
+  }
+}

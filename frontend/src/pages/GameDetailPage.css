@@ -169,6 +169,107 @@
   font-size: 0.9rem;
 }
 
+/* ===== Box score section =====
+   Same card treatment as the win-probability panel, but the table brings its
+   own surface and border (see BoxScore.css), so this wrapper stays transparent
+   to avoid a card inside a card. */
+.boxscore-section {
+  margin-top: 1.5rem;
+}
+
+/* Shared eyebrow row: the mono label plus an optional badge on the right.
+   The h3 rules above already style the label itself — this only handles
+   laying the row out, so both sections stay visually identical. */
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* h3 owned the bottom margin before it sat inside .section-heading; the row
+   owns the spacing now, or the two would stack. */
+.section-heading h3 {
+  margin-bottom: 0;
+}
+
+/* Reuse the accent-tick eyebrow for the box score heading. */
+.boxscore-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.boxscore-section h3::before {
+  content: "";
+  width: 3px;
+  height: 0.95rem;
+  border-radius: 2px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+/* Provenance caption for the win-probability curve. Deliberately quiet —
+   it's a qualifier, not a headline. */
+.section-note {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text-muted) 80%, transparent);
+  text-align: right;
+}
+
+.section-empty {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Live badge ===== */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-accent-glow);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.live-pill::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* Respect a user's reduced-motion preference — a pulsing dot is decorative. */
+@media (prefers-reduced-motion: reduce) {
+  .live-pill::before {
+    animation: none;
+  }
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 480px) {
   .detail-score {

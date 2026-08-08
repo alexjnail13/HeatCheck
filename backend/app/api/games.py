@@ -4,13 +4,31 @@ from sqlalchemy import or_
 from typing import List, Optional
 from datetime import date
 from app.database.session import get_db
-from app.database.models import Game, Team, PlayByPlay
+from app.database.models import Game, Team
+from app.schemas.boxscore import BoxScoreResponse
 from app.schemas.game import GameResponse
-from app.schemas.win_probability import WinProbabilityResponse, WinProbabilityPoint
-from app.ml.features import get_team_win_pcts, extract_event_features
-from app.ml.inference import predict_win_probability
+from app.schemas.win_probability import WinProbabilityResponse
+from app.services.boxscore_query import fetch_boxscore
+from app.services.win_probability import build_curve
 
 router = APIRouter()
+
+
+def _get_game_with_abbreviations(game_id: str, db: Session):
+    """Look up a game by its NBA id, returning (game, home_abbr, away_abbr)."""
+    HomeTeam = aliased(Team)
+    AwayTeam = aliased(Team)
+
+    result = (
+        db.query(Game, HomeTeam.abbreviation, AwayTeam.abbreviation)
+        .join(HomeTeam, Game.home_team_id == HomeTeam.id)
+        .join(AwayTeam, Game.away_team_id == AwayTeam.id)
+        .filter(Game.nba_game_id == game_id)
+        .first()
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return result
 
 
 @router.get("/games", response_model=List[GameResponse])
@@ -101,74 +119,37 @@ def get_game(game_id: str, db: Session = Depends(get_db)):
 
 @router.get("/games/{game_id}/win-probability", response_model=WinProbabilityResponse)
 def get_win_probability(game_id: str, db: Session = Depends(get_db)):
-    # 1. Confirm the game exists (reuse the aliased-join so we also get abbreviations)
-    HomeTeam = aliased(Team)
-    AwayTeam = aliased(Team)
+    """
+    Win-probability curve for a game.
 
-    result = db.query(
-        Game, HomeTeam.abbreviation, AwayTeam.abbreviation
-    ).join(
-        HomeTeam, Game.home_team_id == HomeTeam.id
-    ).join(
-        AwayTeam, Game.away_team_id == AwayTeam.id
-    ).filter(
-        Game.nba_game_id == game_id
-    ).first()
+    Reads from OUR database, never live from nba_api (stats.nba.com blocks
+    Render's datacenter IP). The curve-building and source selection live in
+    services/win_probability.py so a live game and a finished one go through
+    identical feature code.
+    """
+    game, home_abbr, away_abbr = _get_game_with_abbreviations(game_id, db)
+    points, source = build_curve(db, game)
 
-    if not result:
-        raise HTTPException(status_code=404, detail="Game not found")
-
-    game, home_abbr, away_abbr = result
-
-    # 2. Read play-by-play from OUR database (seeded by pipeline/seed_pbp.py),
-    #    not live from nba_api — stats.nba.com blocks Render's datacenter IP.
-    #    ORDER BY event_num rebuilds the game chronologically (rows have no
-    #    inherent order).
-    events = (
-        db.query(PlayByPlay)
-        .filter(PlayByPlay.game_id == game.id)
-        .order_by(PlayByPlay.event_num)
-        .all()
-    )
-
-    # 3. team_strength_diff — constant for the game, computed once
-    win_pcts = get_team_win_pcts(db)
-    home_wp = win_pcts.get(game.home_team_id, 0.5)
-    away_wp = win_pcts.get(game.away_team_id, 0.5)
-    strength_diff = home_wp - away_wp
-
-    # 4. Walk each event → predict → build the series. We rebuild the raw event
-    #    dict and reuse extract_event_features so features are computed by the
-    #    SAME code as training/inference (no train/serve skew).
-    points: list[WinProbabilityPoint] = []
-    for event in events:
-        feats = extract_event_features({
-            "scoreHome": event.score_home,
-            "scoreAway": event.score_away,
-            "period": event.period,
-            "clock": event.clock,
-        })
-        if feats is None:
-            continue  # skip rows with no score/period — don't fail the request
-
-        prob = predict_win_probability(
-            point_differential=feats["point_differential"],
-            time_remaining_seconds=feats["time_remaining_seconds"],
-            team_strength_diff=strength_diff,
-        )
-
-        points.append(WinProbabilityPoint(
-            period=feats["period"],
-            time_remaining_seconds=feats["time_remaining_seconds"],
-            home_win_probability=prob,
-            home_score=feats["score_home"],
-            away_score=feats["score_away"],
-        ))
-
-    # 5. Return the full series + metadata
     return WinProbabilityResponse(
         nba_game_id=game.nba_game_id,
         home_team_abbreviation=home_abbr,
         away_team_abbreviation=away_abbr,
         points=points,
+        source=source,
     )
+
+
+@router.get("/games/{game_id}/boxscore", response_model=BoxScoreResponse)
+def get_boxscore(game_id: str, db: Session = Depends(get_db)):
+    """
+    Full box score — team totals plus every player line.
+
+    Populated by two ingestion paths that share one write path: the laptop-run
+    seeder for historical games, and the Render cron job for live ones. Reads
+    from Postgres either way.
+
+    A scheduled game returns home/away as null rather than 404 — the game
+    exists, its box score simply hasn't happened yet.
+    """
+    game, _, _ = _get_game_with_abbreviations(game_id, db)
+    return fetch_boxscore(db, game)

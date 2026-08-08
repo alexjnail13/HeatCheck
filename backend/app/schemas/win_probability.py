@@ -22,3 +22,8 @@ class WinProbabilityResponse(BaseModel):
     home_team_abbreviation: str
     away_team_abbreviation: str
     points: list[WinProbabilityPoint]
+    # Which table the curve came from: "play_by_play" (seeded after the game,
+    # ~450 events), "snapshots" (polled while live, ~90 points), or "none".
+    # Exposed so the UI can be honest about resolution instead of implying a
+    # coarse live curve is as detailed as a finished one.
+    source: str = "play_by_play"
