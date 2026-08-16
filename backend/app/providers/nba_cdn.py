@@ -43,11 +43,26 @@ SCOREBOARD_URL = (
 BOXSCORE_URL = "https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
 
 TIMEOUT_SECONDS = 15
-# The CDN serves anonymous requests, but a bare python-requests UA occasionally
-# draws a challenge. Identify ourselves honestly instead.
+
+# These files are public and unauthenticated, but they sit behind a CDN filter
+# that rejects requests which don't look like a browser fetching them from
+# nba.com. A User-Agent of "python-requests" gets a 403 before the request ever
+# reaches the file. Sending the headers a browser would send is what makes the
+# same public URL return the same public JSON.
+#
+# This does NOT get past an IP-level block. If a 403 persists with these headers,
+# the host itself is refusing the network you're calling from, and the fix is to
+# call from somewhere else (see scripts/check_nba_cdn.py).
 HEADERS = {
-    "User-Agent": "HeatCheck/1.0 (+https://github.com/) python-requests",
-    "Accept": "application/json",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Origin": "https://www.nba.com",
+    "Referer": "https://www.nba.com/",
+    "Connection": "keep-alive",
 }
 
 # NBA game status codes, from the feed itself.
@@ -216,7 +231,15 @@ def _get_json(url: str) -> dict:
         raise ProviderError(f"{PROVIDER}: request failed for {url}: {exc}") from exc
 
     if resp.status_code == 403:
-        raise ProviderError(f"{PROVIDER}: 403 for {url} (blocked, or file not published)")
+        # A 403 here is ambiguous and the two causes need different fixes, so
+        # include the body: an Akamai/CDN denial page means the NETWORK is
+        # blocked, while a short/empty body usually means the file just isn't
+        # published (a game that hasn't tipped off).
+        body = (resp.text or "")[:300].replace("\n", " ")
+        raise ProviderError(
+            f"{PROVIDER}: 403 for {url} "
+            f"(network blocked, or file not published) body={body!r}"
+        )
     if resp.status_code == 404:
         raise ProviderError(f"{PROVIDER}: 404 for {url} (not published yet)")
     if resp.status_code != 200:

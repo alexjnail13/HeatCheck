@@ -32,7 +32,9 @@ STATS_CONTROL_URL = (
 )
 
 TIMEOUT = 15
-HEADERS = {"User-Agent": "HeatCheck/1.0 (diagnostic)"}
+# Use the SAME headers the real provider sends, or this diagnostic tests
+# something the app never does.
+from app.providers.nba_cdn import HEADERS  # noqa: E402
 
 
 def probe(label: str, url: str) -> tuple[bool, Any]:
@@ -53,7 +55,16 @@ def probe(label: str, url: str) -> tuple[bool, Any]:
     print(f"  HTTP {resp.status_code} in {elapsed_ms:.0f}ms, {len(resp.content)} bytes")
 
     if resp.status_code != 200:
-        print(f"  body preview: {resp.text[:200]}")
+        print(f"  body preview: {resp.text[:300]}")
+        if resp.status_code == 403:
+            # Tell the two failure modes apart, because they need different fixes.
+            body = (resp.text or "").lower()
+            if any(w in body for w in ("akamai", "access denied", "reference #")):
+                print("  -> the NETWORK is blocked. This host refuses requests from"
+                      " here. Run from somewhere else, or use another provider.")
+            else:
+                print("  -> probably just not published yet (a game that hasn't"
+                      " tipped off). Not a block.")
         return False, None
 
     if not resp.content:
