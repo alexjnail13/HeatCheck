@@ -1,0 +1,63 @@
+# Scheduled live-score ingestion.
+#
+# Replaces a Render Cron Job, which requires a paid instance ($1/month minimum).
+# GitHub Actions runs this for free: unlimited on public repos, 2000 minutes a
+# month on private ones.
+#
+# It runs the same command a Render cron would:
+#     python -m app.pipeline.ingest_live
+#
+# which polls cdn.nba.com, writes game_state_snapshots and box scores into
+# Postgres, and exits. The web service only ever reads what this writes.
+
+name: Ingest live NBA games
+
+on:
+  schedule:
+    # Every 10 minutes, but only during NBA game hours: 23:00-06:59 UTC, which
+    # is roughly 6pm-2am Eastern. Running around the clock would burn ~4300 runs
+    # a month and blow through the free minutes on a private repo, to poll a
+    # scoreboard that has nothing on it at 4am.
+    - cron: "*/10 23 * * *"
+    - cron: "*/10 0-6 * * *"
+
+  # Lets you run it by hand from the Actions tab, which is how you test it
+  # without waiting for the schedule.
+  workflow_dispatch:
+
+# If a run is somehow still going when the next one fires, skip the new one
+# rather than having two jobs write at the same time.
+concurrency:
+  group: ingest-live
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # Caching pip cuts each run from ~60s to ~20s, which matters when
+          # you're paying in free minutes.
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run ingestion
+        working-directory: backend
+        env:
+          # Set these in the repo: Settings -> Secrets and variables -> Actions.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # config.py requires these to exist, even though ingestion never uses
+          # them. Real values aren't needed here.
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          GEMINI_API_KEY: ""
+        run: python -m app.pipeline.ingest_live --verbose
