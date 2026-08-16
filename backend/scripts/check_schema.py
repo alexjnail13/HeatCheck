@@ -17,23 +17,15 @@ import sys
 from sqlalchemy import create_engine, inspect
 
 from app.config import settings
-from app.database.session import Base
+from app.database.session import Base, describe_database
 from app.database import models  # noqa: F401  (registers tables on Base.metadata)
-
-
-def redact(url: str) -> str:
-    """Show which host/database we hit without printing the password."""
-    if "@" not in url:
-        return url
-    scheme, rest = url.split("://", 1)
-    creds, host = rest.split("@", 1)
-    user = creds.split(":", 1)[0]
-    return f"{scheme}://{user}:***@{host}"
 
 
 def main() -> int:
     url = settings.DATABASE_URL
-    print(f"Connected to: {redact(url)}\n")
+    # Same banner every pipeline script prints, so "which database am I hitting?"
+    # always looks identical no matter which tool you're running.
+    print(f"Connected to: {describe_database()}\n")
 
     engine = create_engine(url)
     insp = inspect(engine)

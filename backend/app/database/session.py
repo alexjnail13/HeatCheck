@@ -37,7 +37,11 @@ def describe_database(url: str | None = None) -> str:
     if "localhost" in host or "127.0.0.1" in host:
         location = "LOCAL"
     elif "render.com" in host or "oregon-postgres" in host:
-        location = "RENDER (production)"
+        location = "RENDER"
+    elif "neon.tech" in host or "neon.build" in host:
+        location = "NEON (production)"
+    elif "supabase" in host:
+        location = "SUPABASE"
     else:
         location = "remote"
 

@@ -23,7 +23,7 @@ import logging
 
 from nba_api.stats.endpoints import playbyplayv3
 
-from app.database.session import SessionLocal, engine, Base
+from app.database.session import SessionLocal, describe_database
 from app.database.models import Game, PlayByPlay
 
 REQUEST_DELAY = 1.5  # seconds between API calls — don't hammer nba_api
@@ -77,10 +77,17 @@ def store_game_pbp(db, game: Game) -> int:
 
 
 def main() -> None:
-    # Ensure the play_by_play table exists in whatever DB we're pointed at.
-    # create_all only creates missing tables, so this is safe to run anytime and
-    # removes the dependency on the backend having redeployed first.
-    Base.metadata.create_all(bind=engine)
+    # This used to call Base.metadata.create_all(). It doesn't anymore.
+    #
+    # create_all() silently creates tables OUTSIDE Alembic, leaving no
+    # alembic_version row — so the database looks migrated but isn't tracked,
+    # and the next `alembic upgrade head` tries to create tables that already
+    # exist. Schema is owned by Alembic and only by Alembic:
+    #
+    #     alembic upgrade head
+    #
+    # If the tables are missing, that's the fix — not a silent create here.
+    print(f"Target database: {describe_database()}\n")
 
     db = SessionLocal()
     try:

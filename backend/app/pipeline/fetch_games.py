@@ -1,11 +1,24 @@
+"""
+Fetch a season's schedule and results into the games table.
+
+    python -m app.pipeline.fetch_games                    # current default season
+    python -m app.pipeline.fetch_games --season 2024-25
+    python -m app.pipeline.fetch_games --season 2024-25 --season 2025-26
+
+Run from your laptop: nba_api talks to stats.nba.com, which blocks datacenter IPs.
+"""
+
+import argparse
 from datetime import datetime
 from sqlalchemy.orm import Session
-from app.database.session import SessionLocal
+from app.database.session import SessionLocal, describe_database
 from app.database.models import Game, Team
 from nba_api.stats.endpoints import leaguegamefinder
 
+DEFAULT_SEASON = "2025-26"
 
-def fetch_and_store_games(season: str = "2024-25"):
+
+def fetch_and_store_games(season: str = DEFAULT_SEASON):
     db = SessionLocal()
     try:
         # Fetch all games for the season
@@ -83,12 +96,27 @@ def fetch_and_store_games(season: str = "2024-25"):
 
         db.commit()
         print(
-            f"Games sync complete. {len(game_dict)} games found, "
+            f"[{season}] sync complete. {len(game_dict)} games found, "
             f"{inserted} new games inserted, {skipped} skipped (untracked teams)."
         )
     finally:
         db.close()
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--season",
+        action="append",
+        help='Season to fetch, e.g. "2024-25". Repeat for multiple seasons.',
+    )
+    args = parser.parse_args()
+
+    print(f"Target database: {describe_database()}\n")
+
+    for season in args.season or [DEFAULT_SEASON]:
+        fetch_and_store_games(season)
+
+
 if __name__ == "__main__":
-    fetch_and_store_games()
+    main()

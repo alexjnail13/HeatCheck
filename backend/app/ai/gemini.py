@@ -7,7 +7,7 @@ Phase 2 (now): GROUNDING via context injection (Pattern A) — before each reply
 fetch live standings and paste them into the prompt so Gemini answers from real
 numbers instead of stale memory.
 """
-from typing import List
+from typing import List, Optional
 
 from google import genai
 from google.genai import types
@@ -17,10 +17,35 @@ from app.config import settings
 from app.schemas.standings import StandingsRow
 from app.services.standings import fetch_standings
 
-# One client for the process. Reads the key from settings (-> .env).
-_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-
 MODEL = "gemini-2.5-flash"
+
+# One client for the process, built on FIRST USE rather than at import.
+#
+# This used to be a module-level `genai.Client(...)`, which runs the moment
+# anything imports this file. genai.Client raises on an empty API key, and
+# app/main.py imports the chat router, so a missing GEMINI_API_KEY took down the
+# ENTIRE app at startup: no scoreboard, no box scores, no standings. A missing
+# chatbot key should only break the chatbot.
+#
+# Building it lazily also means a fresh clone or a CI run boots without a key.
+_client: Optional[genai.Client] = None
+
+
+class ChatUnavailableError(RuntimeError):
+    """The chatbot can't run — usually a missing or invalid API key."""
+
+
+def get_client() -> genai.Client:
+    """Return the shared Gemini client, creating it the first time it's needed."""
+    global _client
+    if _client is None:
+        if not settings.GEMINI_API_KEY:
+            raise ChatUnavailableError(
+                "GEMINI_API_KEY is not set, so the chatbot is unavailable. "
+                "The rest of the app works without it."
+            )
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    return _client
 
 SYSTEM_PROMPT = (
     "You are \"Ask Heat Check\", the AI assistant inside Heat Check, a real-time "
@@ -66,7 +91,7 @@ def generate_reply(message: str, db: Session) -> str:
 
     prompt = f"{context}User question: {message}"
 
-    response = _client.models.generate_content(
+    response = get_client().models.generate_content(
         model=MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
